@@ -17,6 +17,7 @@ To read more about using these font, please visit the Next.js documentation:
 - App Directory: https://nextjs.org/docs/app/building-your-application/optimizing/fonts
 - Pages Directory: https://nextjs.org/docs/pages/building-your-application/optimizing/fonts
 **/
+
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -86,11 +87,11 @@ export default function dashboardv0() {
                   </div>
                   <div className="grid gap-1">
                     <Label htmlFor="priority">Priority</Label>
-                    <Select id="priority">
+                    <select id="priority" className="form-select">
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
-                    </Select>
+                    </select>
                   </div>
                 </div>
                 <Button type="submit">Create Task</Button>
@@ -142,7 +143,7 @@ export default function dashboardv0() {
                   <TableRow>
                     <TableCell>Schedule team meeting</TableCell>
                     <TableCell>
-                      <Badge variant="success">Completed</Badge>
+                      <Badge variant="secondary">Completed</Badge>
                     </TableCell>
                     <TableCell>2023-04-30</TableCell>
                     <TableCell>
@@ -199,7 +200,7 @@ export default function dashboardv0() {
   );
 }
 
-function CalendarIcon(props) {
+function CalendarIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
@@ -221,7 +222,7 @@ function CalendarIcon(props) {
   );
 }
 
-function MoveHorizontalIcon(props) {
+function MoveHorizontalIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

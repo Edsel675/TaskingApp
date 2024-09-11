@@ -1,15 +1,13 @@
-// Import the functions you need from the SDKs you need
+// Importar las funciones necesarias del SDK de Firebase
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore } from "firebase/firestore"; // Firestore
+import { getAuth } from "firebase/auth"; // Autenticación
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Tu configuración de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyC7SRWjDHolP45_MUTYL4HTndLWnjQuCig",
   authDomain: "tasking-eafda.firebaseapp.com",
-  databaseURL: "https://tasking-eafda-default-rtdb.firebaseio.com",
+  databaseURL: "https://tasking-eafda-default-rtdb.firebaseio.com", // URL para Realtime Database
   projectId: "tasking-eafda",
   storageBucket: "tasking-eafda.appspot.com",
   messagingSenderId: "340528068216",
@@ -17,6 +15,9 @@ const firebaseConfig = {
   measurementId: "G-YS01XP453R"
 };
 
-// Initialize Firebase
+// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Exportar Firestore y autenticación
+export const db = getFirestore(app); // Cambiado a getFirestore para Firestore
+export const auth = getAuth(app); // Autenticación

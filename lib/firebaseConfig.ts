@@ -1,13 +1,13 @@
 // Importar las funciones necesarias del SDK de Firebase
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore"; // Firestore
-import { getAuth } from "firebase/auth"; // Autenticación
+import { getAuth, GoogleAuthProvider } from "firebase/auth"; // Autenticación
 
 // Tu configuración de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyC7SRWjDHolP45_MUTYL4HTndLWnjQuCig",
   authDomain: "tasking-eafda.firebaseapp.com",
-  databaseURL: "https://tasking-eafda-default-rtdb.firebaseio.com", // URL para Realtime Database
+  databaseURL: "https://tasking-eafda-default-rtdb.firebaseio.com",
   projectId: "tasking-eafda",
   storageBucket: "tasking-eafda.appspot.com",
   messagingSenderId: "340528068216",
@@ -18,6 +18,9 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exportar Firestore y autenticación
-export const db = getFirestore(app); // Cambiado a getFirestore para Firestore
-export const auth = getAuth(app); // Autenticación
+// Inicializar Firestore y Auth
+export const db = getFirestore(app);
+export const auth = getAuth(app);
+
+// Proveedor de Google para autenticación
+export const provider = new GoogleAuthProvider();

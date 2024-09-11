@@ -22,6 +22,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebaseConfig";
 import Weather from "@/components/Weather";
+import { useRouter } from "next/navigation"; // Importar useRouter para navegación
 
 const NoteTaskApp = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -42,6 +43,8 @@ const NoteTaskApp = () => {
   const [editingDrawing, setEditingDrawing] = useState<string | null>(null);
 
   const DRAWING_SIZE = 150;
+
+  const router = useRouter(); // Inicializar useRouter para navegación
 
   useEffect(() => {
     fetchTasks();
@@ -375,6 +378,14 @@ const NoteTaskApp = () => {
         <ChevronRight size={24} />
         <Folder size={24} />
         <Weather city="Monterrey" />
+
+        {/* Botón para navegar a otra página */}
+        <button
+          className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded"
+          onClick={() => router.push("/other-page")} // Navegar a otra página
+        >
+          Ir a otra página
+        </button>
       </div>
 
       {/* Workspace */}

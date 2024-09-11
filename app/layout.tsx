@@ -1,5 +1,3 @@
-"use client"; // Añadido al inicio del archivo
-
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";

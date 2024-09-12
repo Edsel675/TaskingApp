@@ -22,9 +22,15 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebaseConfig";
 import Weather from "@/components/Weather";
+import Header from "@/components/Header";
 import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebaseConfig";
 
 export default function HomePage() {
+  const [user, setUser] = useState(null);
+  const router = useRouter(); // Inicializar useRouter para navegación
+
   const [tasks, setTasks] = useState<any[]>([]);
   const [mode, setMode] = useState("view");
   const [newNote, setNewNote] = useState("");
@@ -46,14 +52,6 @@ export default function HomePage() {
 
   const DRAWING_SIZE = 150;
 
-  const router = useRouter(); // Inicializar useRouter para navegación
-
-  useEffect(() => {
-    fetchTasks();
-    fetchDrawings();
-    fetchTextBoxes();
-  }, []);
-
   const handleTimeChange = (newTime: Date) => {
     console.log("handleTimeChange called", newTime);
     setCurrentTime(newTime);
@@ -62,19 +60,19 @@ export default function HomePage() {
 
   const Clock = ({ onTimeChange }: { onTimeChange: (time: Date) => void }) => {
     const [time, setTime] = useState<Date | null>(null);
-  
+
     useEffect(() => {
       const timer = setInterval(() => {
         const newTime = new Date();
         setTime(newTime);
         handleTimeChange(newTime);
       }, 1000);
-  
+
       return () => clearInterval(timer);
     }, [onTimeChange]);
-  
+
     if (time === null) return null; // Don't render anything on the server side
-  
+
     return (
       <div className="fixed bottom-4 left-4 text-lg font-bold">
         {time.toLocaleTimeString()}
@@ -91,7 +89,6 @@ export default function HomePage() {
     }));
     setTasks(tasksArray);
   };
-
 
   const fetchDrawings = async () => {
     const querySnapshot = await getDocs(collection(db, "drawings"));
@@ -211,7 +208,11 @@ export default function HomePage() {
   const checkTimers = (currentTime: Date) => {
     setTasks((prevTasks) =>
       prevTasks.map((task) => {
-        if (task.timer && currentTime >= new Date(task.timer) && !task.timerExpired) {
+        if (
+          task.timer &&
+          currentTime >= new Date(task.timer) &&
+          !task.timerExpired
+        ) {
           playAlertSound();
           updateTaskTimerExpired(task.id);
           return { ...task, timerExpired: true };
@@ -223,12 +224,16 @@ export default function HomePage() {
 
   const playAlertSound = () => {
     const audio = new Audio("/alarm.mp3");
-    audio.play().catch(error => console.error("Error playing sound:", error));
+    audio.play().catch((error) => console.error("Error playing sound:", error));
   };
 
   const updateTaskTimerExpired = async (taskId: string) => {
     try {
-      await setDoc(doc(db, "tasks", taskId), { timerExpired: true }, { merge: true });
+      await setDoc(
+        doc(db, "tasks", taskId),
+        { timerExpired: true },
+        { merge: true }
+      );
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
           task.id === taskId ? { ...task, timerExpired: true } : task
@@ -424,106 +429,180 @@ export default function HomePage() {
       console.error("Error deleting drawing: ", error);
     }
   };
+
+  useEffect(() => {
+    fetchTasks();
+    fetchDrawings();
+    fetchTextBoxes();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUser(user);
+      } else {
+        router.push("/login");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  if (!user) {
+    return <p>Loading...</p>;
+  }
+
   return (
-    <div className="flex h-screen bg-background text-foreground font-sans">
-      {/* Tools Panel */}
-      <div className="w-20 bg-secondary p-4 flex flex-col items-center space-y-6">
-        <h2 className="text-sm font-bold mb-4">tools</h2>
-        <Type size={24} onClick={handleTextClick} className="cursor-pointer" />
-        <FileText
-          size={24}
-          onClick={handleNotepadClick}
-          className="cursor-pointer"
-        />
-        <Pencil
-          size={24}
-          onClick={handlePencilClick}
-          className="cursor-pointer"
-        />
-        <Trash size={24} />
-        <ChevronRight size={24} />
-        <Folder size={24} />
-        <Weather city="Monterrey" />
+    <div>
+      <Header />
+      <div className="flex h-screen bg-background text-foreground font-sans">
+        {/* Tools Panel */}
+        <div className="w-20 bg-secondary p-4 flex flex-col items-center space-y-6">
+          <h2 className="text-sm font-bold mb-4">tools</h2>
+          <Type
+            size={24}
+            onClick={handleTextClick}
+            className="cursor-pointer"
+          />
+          <FileText
+            size={24}
+            onClick={handleNotepadClick}
+            className="cursor-pointer"
+          />
+          <Pencil
+            size={24}
+            onClick={handlePencilClick}
+            className="cursor-pointer"
+          />
+          {/* OpenWeatherMap API usage*/}
+          <Weather city="Monterrey" />
+        </div>
 
-        {/* Botón para navegar a otra página */}
-        <button
-          className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded"
-          onClick={() => router.push("/login")} // Navegar a otra página
+        {/* Workspace */}
+        <div
+          ref={workspaceRef}
+          className="flex-grow bg-muted p-6 relative overflow-hidden"
         >
-          Ir a otra página
-        </button>
-      </div>
-
-      {/* Workspace */}
-      <div
-        ref={workspaceRef}
-        className="flex-grow bg-muted p-6 relative overflow-hidden"
-      >
-        <h2 className="text-sm font-bold absolute top-4 left-1/2 transform -translate-x-1/2">
-          workspace
-        </h2>
-        {mode === "write" && (
-          <div className="mt-12 flex flex-col items-center">
-            <textarea
-              className="w-full h-64 p-2 bg-card rounded shadow"
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              placeholder="Write your note here..."
-            />
-            <button
-              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded"
-              onClick={handleNoteSubmit}
-            >
-              Save Note
-            </button>
-          </div>
-        )}
-        {mode === "draw" && (
-          <div className="mt-12">
-            <canvas
-              ref={canvasRef}
-              width={800}
-              height={600}
-              className="border border-gray-300"
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={endDrawing}
-              onMouseLeave={endDrawing}
-            />
-            <button
-              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded"
-              onClick={saveDrawing}
-            >
-              {editingDrawing ? "Update Drawing" : "Save Drawing"}
-            </button>
-          </div>
-        )}
-        {mode === "view" && (
-          <div className="mt-12">
-            {drawings.map((drawing) => (
-              <div
-                key={drawing.id}
-                style={{
-                  position: "absolute",
-                  left: drawing.x,
-                  top: drawing.y,
-                  width: `${DRAWING_SIZE}px`,
-                  height: `${DRAWING_SIZE}px`,
-                  border: "2px solid #000",
-                  backgroundColor: "rgba(255, 255, 255, 0.8)",
-                  cursor: "move",
-                }}
+          <h2 className="text-sm font-bold absolute top-4 left-1/2 transform -translate-x-1/2">
+            workspace
+          </h2>
+          {mode === "write" && (
+            <div className="mt-12 flex flex-col items-center">
+              <textarea
+                className="w-full h-64 p-2 bg-card rounded shadow"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Write your note here..."
+              />
+              <button
+                className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded"
+                onClick={handleNoteSubmit}
               >
-                <svg
-                  width={DRAWING_SIZE}
-                  height={DRAWING_SIZE}
-                  viewBox={drawing.viewBox}
+                Save Note
+              </button>
+            </div>
+          )}
+          {mode === "draw" && (
+            <div className="mt-12">
+              <canvas
+                ref={canvasRef}
+                width={800}
+                height={600}
+                className="border border-gray-300"
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={endDrawing}
+                onMouseLeave={endDrawing}
+              />
+              <button
+                className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded"
+                onClick={saveDrawing}
+              >
+                {editingDrawing ? "Update Drawing" : "Save Drawing"}
+              </button>
+            </div>
+          )}
+          {mode === "view" && (
+            <div className="mt-12">
+              {drawings.map((drawing) => (
+                <div
+                  key={drawing.id}
+                  style={{
+                    position: "absolute",
+                    left: drawing.x,
+                    top: drawing.y,
+                    width: `${DRAWING_SIZE}px`,
+                    height: `${DRAWING_SIZE}px`,
+                    border: "2px solid #000",
+                    backgroundColor: "rgba(255, 255, 255, 0.8)",
+                    cursor: "move",
+                  }}
+                >
+                  <svg
+                    width={DRAWING_SIZE}
+                    height={DRAWING_SIZE}
+                    viewBox={drawing.viewBox}
+                    onMouseDown={(e) => {
+                      const startX = e.clientX;
+                      const startY = e.clientY;
+                      const moveHandler = (e: MouseEvent) => {
+                        moveDrawing(
+                          drawing.id,
+                          e.clientX - startX,
+                          e.clientY - startY
+                        );
+                      };
+                      const upHandler = () => {
+                        document.removeEventListener("mousemove", moveHandler);
+                        document.removeEventListener("mouseup", upHandler);
+                      };
+                      document.addEventListener("mousemove", moveHandler);
+                      document.addEventListener("mouseup", upHandler);
+                    }}
+                  >
+                    {drawing.strokes.map((stroke, index) => (
+                      <path
+                        key={index}
+                        d={`M ${stroke}`}
+                        fill="none"
+                        stroke="black"
+                        strokeWidth="2"
+                      />
+                    ))}
+                  </svg>
+                  <div className="absolute bottom-0 left-0 right-0 flex justify-center p-1 bg-opacity-50 bg-white">
+                    <button
+                      onClick={() => editDrawing(drawing.id)}
+                      className="mr-2"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button onClick={() => deleteDrawing(drawing.id)}>
+                      <Trash size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {textBoxes.map((box) => (
+                <div
+                  key={box.id}
+                  style={{
+                    position: "absolute",
+                    left: box.x,
+                    top: box.y,
+                    minWidth: "200px",
+                    minHeight: "100px",
+                    padding: "10px",
+                    border: "1px solid #000",
+                    backgroundColor: "white",
+                    cursor: "move",
+                  }}
                   onMouseDown={(e) => {
                     const startX = e.clientX;
                     const startY = e.clientY;
                     const moveHandler = (e: MouseEvent) => {
-                      moveDrawing(
-                        drawing.id,
+                      moveTextBox(
+                        box.id,
                         e.clientX - startX,
                         e.clientY - startY
                       );
@@ -536,151 +615,103 @@ export default function HomePage() {
                     document.addEventListener("mouseup", upHandler);
                   }}
                 >
-                  {drawing.strokes.map((stroke, index) => (
-                    <path
-                      key={index}
-                      d={`M ${stroke}`}
-                      fill="none"
-                      stroke="black"
-                      strokeWidth="2"
-                    />
-                  ))}
-                </svg>
-                <div className="absolute bottom-0 left-0 right-0 flex justify-center p-1 bg-opacity-50 bg-white">
+                  <textarea
+                    value={box.content}
+                    onChange={(e) => updateTextBox(box.id, e.target.value)}
+                    className="w-full h-full border-none resize-none focus:outline-none"
+                  />
                   <button
-                    onClick={() => editDrawing(drawing.id)}
-                    className="mr-2"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button onClick={() => deleteDrawing(drawing.id)}>
-                    <Trash size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            {textBoxes.map((box) => (
-              <div
-                key={box.id}
-                style={{
-                  position: "absolute",
-                  left: box.x,
-                  top: box.y,
-                  minWidth: "200px",
-                  minHeight: "100px",
-                  padding: "10px",
-                  border: "1px solid #000",
-                  backgroundColor: "white",
-                  cursor: "move",
-                }}
-                onMouseDown={(e) => {
-                  const startX = e.clientX;
-                  const startY = e.clientY;
-                  const moveHandler = (e: MouseEvent) => {
-                    moveTextBox(box.id, e.clientX - startX, e.clientY - startY);
-                  };
-                  const upHandler = () => {
-                    document.removeEventListener("mousemove", moveHandler);
-                    document.removeEventListener("mouseup", upHandler);
-                  };
-                  document.addEventListener("mousemove", moveHandler);
-                  document.addEventListener("mouseup", upHandler);
-                }}
-              >
-                <textarea
-                  value={box.content}
-                  onChange={(e) => updateTextBox(box.id, e.target.value)}
-                  className="w-full h-full border-none resize-none focus:outline-none"
-                />
-                <button
-                  onClick={() => deleteTextBox(box.id)}
-                  className="absolute top-0 right-0 p-1 text-destructive hover:text-destructive-foreground"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Tasks Panel */}
-      <div className="w-64 bg-secondary p-4 overflow-y-auto">
-        <h2 className="text-sm font-bold mb-4">tasks</h2>
-        <div className="space-y-4">
-          {tasks.length > 0 ? (
-            tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`p-2 rounded flex flex-col ${
-                  task.timerExpired ? 'bg-red-500' : 'bg-card'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="font-bold">{task.title}</span>
-                    <br />
-                    {task.description}
-                  </div>
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="text-destructive hover:text-destructive-foreground"
+                    onClick={() => deleteTextBox(box.id)}
+                    className="absolute top-0 right-0 p-1 text-destructive hover:text-destructive-foreground"
                   >
                     <X size={16} />
                   </button>
                 </div>
-                {task.timer && (
-                  <div className="mt-2 text-sm">
-                    <Clock size={14} className="inline-block mr-1" />
-                    {new Date(task.timer).toLocaleString()}
-                    {task.timerExpired && (
-                      <span className="ml-2 text-white font-bold">Expired</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <p>No tasks available</p>
+              ))}
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Add Task Modal */}
-      {mode === "write" && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-background p-6 rounded-lg w-96">
-            <h3 className="text-lg font-bold mb-4">Add New Task</h3>
-            <textarea
-              className="w-full h-32 p-2 bg-card rounded shadow mb-4"
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              placeholder="Write your task here..."
-            />
-            <input
-              type="datetime-local"
-              className="w-full p-2 bg-card rounded shadow mb-4"
-              value={newTaskTimer}
-              onChange={(e) => setNewTaskTimer(e.target.value)}
-            />
-            <div className="flex justify-end">
-              <button
-                className="px-4 py-2 bg-secondary text-secondary-foreground rounded mr-2"
-                onClick={() => setMode("view")}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-primary text-primary-foreground rounded"
-                onClick={handleNoteSubmit}
-              >
-                Save Task
-              </button>
-            </div>
+        {/* Tasks Panel */}
+        <div className="w-64 bg-secondary p-4 overflow-y-auto">
+          <h2 className="text-sm font-bold mb-4">tasks</h2>
+          <div className="space-y-4">
+            {tasks.length > 0 ? (
+              tasks.map((task) => (
+                <div
+                  key={task.id}
+                  className={`p-2 rounded flex flex-col ${
+                    task.timerExpired ? "bg-red-500" : "bg-card"
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-bold">{task.title}</span>
+                      <br />
+                      {task.description}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="text-destructive hover:text-destructive-foreground"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  {task.timer && (
+                    <div className="mt-2 text-sm">
+                      <Clock size={14} className="inline-block mr-1" />
+                      {new Date(task.timer).toLocaleString()}
+                      {task.timerExpired && (
+                        <span className="ml-2 text-white font-bold">
+                          Expired
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p>No tasks available</p>
+            )}
           </div>
         </div>
-      )}
-      <Clock onTimeChange={handleTimeChange || (() => {})} />
+
+        {/* Add Task Modal */}
+        {mode === "write" && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-background p-6 rounded-lg w-96">
+              <h3 className="text-lg font-bold mb-4">Add New Task</h3>
+              <textarea
+                className="w-full h-32 p-2 bg-card rounded shadow mb-4"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Write your task here..."
+              />
+              <input
+                type="datetime-local"
+                className="w-full p-2 bg-card rounded shadow mb-4"
+                value={newTaskTimer}
+                onChange={(e) => setNewTaskTimer(e.target.value)}
+              />
+              <div className="flex justify-end">
+                <button
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded mr-2"
+                  onClick={() => setMode("view")}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded"
+                  onClick={handleNoteSubmit}
+                >
+                  Save Task
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        <Clock onTimeChange={handleTimeChange || (() => {})} />
+      </div>
     </div>
   );
 }

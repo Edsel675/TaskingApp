@@ -1,20 +1,23 @@
 "use client";
 import { useState } from "react";
-import { 
-  signInWithPopup, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword 
+import {
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
 } from "firebase/auth";
-import { auth, provider, db } from "@/lib/firebaseConfig";  // Importa tu configuración de Firebase
+import { auth, provider, db } from "@/lib/firebaseConfig"; // Importa tu configuración de Firebase
 import { useRouter } from "next/navigation";
-import { doc, setDoc } from "firebase/firestore";  // Para almacenar los usuarios en Firestore
-import { getAdditionalUserInfo } from "firebase/auth";  // Importa para obtener la información adicional del usuario
+import { doc, setDoc } from "firebase/firestore"; // Para almacenar los usuarios en Firestore
+import { getAdditionalUserInfo } from "firebase/auth"; // Importa para obtener la información adicional del usuario
+import { Button } from "@/components/ui/button";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function AuthPage() {
-  const [isSignUp, setIsSignUp] = useState(false);  // Alternar entre inicio de sesión y registro
+  const [isSignUp, setIsSignUp] = useState(false); // Alternar entre inicio de sesión y registro
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");  // Agregar nombre de usuario en el formulario de registro
+  const [name, setName] = useState(""); // Agregar nombre de usuario en el formulario de registro
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -47,7 +50,11 @@ export default function AuthPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       // Agregar el usuario a Firestore
@@ -58,7 +65,7 @@ export default function AuthPage() {
       });
 
       console.log("Usuario registrado:", user);
-      router.push("/");  // Redirigir a la página principal después del registro
+      router.push("/"); // Redirigir a la página principal después del registro
     } catch (error) {
       console.error("Error registrando el usuario:", error);
       setError("Error registrando el usuario");
@@ -69,10 +76,14 @@ export default function AuthPage() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
       console.log("Usuario inició sesión:", user);
-      router.push("/");  // Redirigir a la página principal después del inicio de sesión
+      router.push("/"); // Redirigir a la página principal después del inicio de sesión
     } catch (error) {
       console.error("Error al iniciar sesión:", error);
       setError("Error al iniciar sesión");
@@ -81,6 +92,10 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+      <div className="bg-white p-6 w-full max-w-md mb-4">
+        <Link href={"/"}>Back to Homepage</Link>
+      </div>
+
       <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-6">Bienvenido</h1>
         {error && <p className="text-red-500 mb-4">Error: {error}</p>}
@@ -125,7 +140,10 @@ export default function AuthPage() {
               className="border p-2 rounded"
               required
             />
-            <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition">
+            <button
+              type="submit"
+              className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition"
+            >
               Registrarse
             </button>
           </form>
@@ -147,20 +165,13 @@ export default function AuthPage() {
               className="border p-2 rounded"
               required
             />
-            <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition">
-              Iniciar sesión
-            </button>
+            <Button type="submit">Iniciar sesión</Button>
           </form>
         )}
 
         <div className="mt-4 text-center">
-          <p className="mb-2">o</p>
-          <button
-            onClick={signInWithGoogle}
-            className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition"
-          >
-            Iniciar sesión con Google
-          </button>
+          <p className="mb-4">o</p>
+          <Button onClick={signInWithGoogle}>Iniciar sesión con Google</Button>
         </div>
       </div>
     </div>

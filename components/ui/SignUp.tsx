@@ -1,6 +1,7 @@
 "use client";
+
 import { useState } from "react";
-import { auth } from "@/lib/firebaseConfig"; 
+import { auth } from "@/lib/firebaseConfig"; // Asegúrate de tener configurada esta ruta correctamente
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function SignUp() {

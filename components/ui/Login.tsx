@@ -1,7 +1,7 @@
 "use client";
 
 import { signInWithPopup } from "firebase/auth";
-import { auth, provider } from "@/lib/firebaseConfig"; // Ruta correcta de tu config de Firebase
+import { auth, provider } from "@/lib/firebaseConfig"; // Asegúrate de tener configurada esta ruta correctamente
 import { useRouter } from "next/navigation"; // Para redirigir después del login
 
 const signInWithGoogle = async () => {

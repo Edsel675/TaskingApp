@@ -22,12 +22,14 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebaseConfig";
 import Weather from "@/components/Weather";
-import { useRouter } from "next/navigation"; // Importar useRouter para navegación
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [mode, setMode] = useState("view");
   const [newNote, setNewNote] = useState("");
+  const [newTaskTimer, setNewTaskTimer] = useState("");
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [drawings, setDrawings] = useState<
     { id: string; strokes: string[]; x: number; y: number; viewBox: string }[]
   >([]);
@@ -52,14 +54,44 @@ export default function HomePage() {
     fetchTextBoxes();
   }, []);
 
+  const handleTimeChange = (newTime: Date) => {
+    console.log("handleTimeChange called", newTime);
+    setCurrentTime(newTime);
+    checkTimers(newTime);
+  };
+
+  const Clock = ({ onTimeChange }: { onTimeChange: (time: Date) => void }) => {
+    const [time, setTime] = useState<Date | null>(null);
+  
+    useEffect(() => {
+      const timer = setInterval(() => {
+        const newTime = new Date();
+        setTime(newTime);
+        handleTimeChange(newTime);
+      }, 1000);
+  
+      return () => clearInterval(timer);
+    }, [onTimeChange]);
+  
+    if (time === null) return null; // Don't render anything on the server side
+  
+    return (
+      <div className="fixed bottom-4 left-4 text-lg font-bold">
+        {time.toLocaleTimeString()}
+      </div>
+    );
+  };
+
   const fetchTasks = async () => {
     const querySnapshot = await getDocs(collection(db, "tasks"));
     const tasksArray = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
+      timer: doc.data().timer ? new Date(doc.data().timer) : null,
     }));
     setTasks(tasksArray);
   };
+
 
   const fetchDrawings = async () => {
     const querySnapshot = await getDocs(collection(db, "drawings"));
@@ -149,12 +181,16 @@ export default function HomePage() {
   const handleNoteSubmit = async () => {
     if (newNote.trim()) {
       try {
+        const timerDate = newTaskTimer ? new Date(newTaskTimer) : null;
         await addDoc(collection(db, "tasks"), {
           title: newNote.split("\n")[0] || "New Note",
           description: newNote,
           createdAt: new Date(),
+          timer: timerDate ? timerDate.toISOString() : null,
+          timerExpired: false,
         });
         setNewNote("");
+        setNewTaskTimer("");
         setMode("view");
         fetchTasks();
       } catch (error) {
@@ -169,6 +205,37 @@ export default function HomePage() {
       fetchTasks();
     } catch (error) {
       console.error("Error deleting document: ", error);
+    }
+  };
+
+  const checkTimers = (currentTime: Date) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        if (task.timer && currentTime >= new Date(task.timer) && !task.timerExpired) {
+          playAlertSound();
+          updateTaskTimerExpired(task.id);
+          return { ...task, timerExpired: true };
+        }
+        return task;
+      })
+    );
+  };
+
+  const playAlertSound = () => {
+    const audio = new Audio("/alarm.mp3");
+    audio.play().catch(error => console.error("Error playing sound:", error));
+  };
+
+  const updateTaskTimerExpired = async (taskId: string) => {
+    try {
+      await setDoc(doc(db, "tasks", taskId), { timerExpired: true }, { merge: true });
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === taskId ? { ...task, timerExpired: true } : task
+        )
+      );
+    } catch (error) {
+      console.error("Error updating task timer status: ", error);
     }
   };
 
@@ -545,19 +612,32 @@ export default function HomePage() {
             tasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-card p-2 rounded flex justify-between items-start"
+                className={`p-2 rounded flex flex-col ${
+                  task.timerExpired ? 'bg-red-500' : 'bg-card'
+                }`}
               >
-                <div>
-                  <span className="font-bold">{task.title}</span>
-                  <br />
-                  {task.description}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="font-bold">{task.title}</span>
+                    <br />
+                    {task.description}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteTask(task.id)}
+                    className="text-destructive hover:text-destructive-foreground"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleDeleteTask(task.id)}
-                  className="text-destructive hover:text-destructive-foreground"
-                >
-                  <X size={16} />
-                </button>
+                {task.timer && (
+                  <div className="mt-2 text-sm">
+                    <Clock size={14} className="inline-block mr-1" />
+                    {new Date(task.timer).toLocaleString()}
+                    {task.timerExpired && (
+                      <span className="ml-2 text-white font-bold">Expired</span>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           ) : (
@@ -565,6 +645,42 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* Add Task Modal */}
+      {mode === "write" && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-background p-6 rounded-lg w-96">
+            <h3 className="text-lg font-bold mb-4">Add New Task</h3>
+            <textarea
+              className="w-full h-32 p-2 bg-card rounded shadow mb-4"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Write your task here..."
+            />
+            <input
+              type="datetime-local"
+              className="w-full p-2 bg-card rounded shadow mb-4"
+              value={newTaskTimer}
+              onChange={(e) => setNewTaskTimer(e.target.value)}
+            />
+            <div className="flex justify-end">
+              <button
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded mr-2"
+                onClick={() => setMode("view")}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-primary text-primary-foreground rounded"
+                onClick={handleNoteSubmit}
+              >
+                Save Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Clock onTimeChange={handleTimeChange || (() => {})} />
     </div>
   );
 }

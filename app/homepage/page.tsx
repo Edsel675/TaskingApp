@@ -26,9 +26,10 @@ import Header from "@/components/Header";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebaseConfig";
+import { User } from "firebase/auth";
 
 export default function HomePage() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter(); // Inicializar useRouter para navegación
 
   const [tasks, setTasks] = useState<any[]>([]);
@@ -94,7 +95,10 @@ export default function HomePage() {
     const querySnapshot = await getDocs(collection(db, "drawings"));
     const drawingsArray = querySnapshot.docs.map((doc) => ({
       id: doc.id,
-      ...doc.data(),
+      strokes: doc.data().strokes || [], // Ensure strokes is an array
+      x: doc.data().x || 0, // Default value for x
+      y: doc.data().y || 0, // Default value for y
+      viewBox: doc.data().viewBox || "0 0 100 100", // Default viewBox
     }));
     setDrawings(drawingsArray);
   };
@@ -168,10 +172,20 @@ export default function HomePage() {
 
   const fetchTextBoxes = async () => {
     const querySnapshot = await getDocs(collection(db, "textBoxes"));
-    const textBoxesArray = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const textBoxesArray: {
+      id: string;
+      content: string;
+      x: number;
+      y: number;
+    }[] = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        content: data.content || "", // Provide a default value if content is missing
+        x: data.x || 0, // Provide a default value if x is missing
+        y: data.y || 0, // Provide a default value if y is missing
+      };
+    });
     setTextBoxes(textBoxesArray);
   };
 
@@ -659,11 +673,12 @@ export default function HomePage() {
                   </div>
                   {task.timer && (
                     <div className="mt-2 text-sm">
-                      <Clock size={14} className="inline-block mr-1" />
+                      {/* Remove the size prop if it's not supported */}
+                      <Clock onTimeChange={handleTimeChange} />
                       {new Date(task.timer).toLocaleString()}
                       {task.timerExpired && (
                         <span className="ml-2 text-white font-bold">
-                          Expired
+                          {/* Additional content */}
                         </span>
                       )}
                     </div>

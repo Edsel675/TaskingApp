@@ -6,7 +6,7 @@ export default function Header() {
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b">
       <Link href="#" className="flex items-center gap-2" prefetch={false}>
-        <CheckIcon className="w-6 h-6 text-primary" />
+        <CheckIcon />
         <span className="font-medium text-lg">Tasking</span>
       </Link>
       <div className="flex items-center gap-4">
@@ -22,10 +22,9 @@ export default function Header() {
   );
 }
 
-function CheckIcon(props) {
+function CheckIcon() {
   return (
     <svg
-      {...props}
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"

@@ -35,6 +35,8 @@ export default function HomePage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [mode, setMode] = useState("view");
   const [newNote, setNewNote] = useState("");
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskTimer, setNewTaskTimer] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [drawings, setDrawings] = useState<
@@ -189,18 +191,19 @@ export default function HomePage() {
     setTextBoxes(textBoxesArray);
   };
 
-  const handleNoteSubmit = async () => {
-    if (newNote.trim()) {
+  const handleTaskSubmit = async () => {
+    if (newTaskTitle.trim()) {
       try {
         const timerDate = newTaskTimer ? new Date(newTaskTimer) : null;
         await addDoc(collection(db, "tasks"), {
-          title: newNote.split("\n")[0] || "New Note",
-          description: newNote,
+          title: newTaskTitle.trim(),
+          description: newTaskDescription.trim(),
           createdAt: new Date(),
           timer: timerDate ? timerDate.toISOString() : null,
           timerExpired: false,
         });
-        setNewNote("");
+        setNewTaskTitle("");
+        setNewTaskDescription("");
         setNewTaskTimer("");
         setMode("view");
         fetchTasks();
@@ -500,22 +503,6 @@ export default function HomePage() {
           <h2 className="text-sm font-bold absolute top-4 left-1/2 transform -translate-x-1/2">
             workspace
           </h2>
-          {mode === "write" && (
-            <div className="mt-12 flex flex-col items-center">
-              <textarea
-                className="w-full h-64 p-2 bg-card rounded shadow"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Write your note here..."
-              />
-              <button
-                className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded"
-                onClick={handleNoteSubmit}
-              >
-                Save Note
-              </button>
-            </div>
-          )}
           {mode === "draw" && (
             <div className="mt-12">
               <canvas
@@ -673,12 +660,10 @@ export default function HomePage() {
                   </div>
                   {task.timer && (
                     <div className="mt-2 text-sm">
-                      {/* Remove the size prop if it's not supported */}
-                      <Clock onTimeChange={handleTimeChange} />
                       {new Date(task.timer).toLocaleString()}
                       {task.timerExpired && (
                         <span className="ml-2 text-white font-bold">
-                          {/* Additional content */}
+                          Timer Expired
                         </span>
                       )}
                     </div>
@@ -696,11 +681,18 @@ export default function HomePage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
             <div className="bg-background p-6 rounded-lg w-96">
               <h3 className="text-lg font-bold mb-4">Add New Task</h3>
+              <input
+                type="text"
+                className="w-full p-2 bg-card rounded shadow mb-4"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="Task Title"
+              />
               <textarea
                 className="w-full h-32 p-2 bg-card rounded shadow mb-4"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Write your task here..."
+                value={newTaskDescription}
+                onChange={(e) => setNewTaskDescription(e.target.value)}
+                placeholder="Task Description"
               />
               <input
                 type="datetime-local"
@@ -717,7 +709,7 @@ export default function HomePage() {
                 </button>
                 <button
                   className="px-4 py-2 bg-primary text-primary-foreground rounded"
-                  onClick={handleNoteSubmit}
+                  onClick={handleTaskSubmit}
                 >
                   Save Task
                 </button>
